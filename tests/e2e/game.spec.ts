@@ -1,11 +1,75 @@
 import { test, expect } from '@playwright/test';
 import type { State } from '../../src/game/types';
 declare global { interface Window { __snake: { state(): State; load(state: State): void; effects(): { time: number; particles: { x: number; y: number; alpha: number; color: string }[] } } } }
+declare global { interface Window { __audio: { contexts: AudioContext[]; tones: { start: number; end: number; type: string }[]; noise: number } } }
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
   // Pause before loading the game, allowing for slow browser startup on Windows.
   await page.clock.pauseAt(new Date('2026-01-02T00:00:00Z'));
   await page.goto('/');
+});
+test('默认音效、原生音频频率、有效转向、死亡和静音切换', async ({ page }) => {
+  test.setTimeout(240_000);
+  // The Windows WebKit test build has no Web Audio implementation.
+  if (!await page.evaluate(() => typeof window.AudioContext === 'function')) {
+    const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+    await expect(page.locator('#mute')).toHaveAttribute('aria-pressed', 'false');
+    await page.getByRole('button', { name: '开始游戏' }).click();
+    await page.evaluate(() => window.__snake.load({ ...window.__snake.state(), food: { x: 13, y: 12 } }));
+    await page.clock.runFor(250); await expect(page.locator('#score')).toHaveText('1');
+    await page.locator('#mute').focus(); await page.keyboard.press('Space');
+    await expect(page.locator('#mute')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#mute').click(); await expect(page.locator('#mute')).toHaveAttribute('aria-pressed', 'false');
+    expect(errors).toEqual([]); return;
+  }
+  await page.addInitScript(() => {
+    window.__audio = { contexts: [], tones: [], noise: 0 };
+    const NativeContext = window.AudioContext;
+    window.AudioContext = class extends NativeContext {
+      constructor() { super(); window.__audio.contexts.push(this); }
+      createOscillator() {
+        const oscillator = super.createOscillator();
+        const tone = { start: 0, end: 0, type: '' }; window.__audio.tones.push(tone);
+        const set = oscillator.frequency.setValueAtTime.bind(oscillator.frequency);
+        const ramp = oscillator.frequency.exponentialRampToValueAtTime.bind(oscillator.frequency);
+        oscillator.frequency.setValueAtTime = (value, time) => { tone.start = value; return set(value, time); };
+        oscillator.frequency.exponentialRampToValueAtTime = (value, time) => { tone.end = value; return ramp(value, time); };
+        const start = oscillator.start.bind(oscillator);
+        oscillator.start = (time) => { tone.type = oscillator.type; start(time); };
+        return oscillator;
+      }
+      createBufferSource() { window.__audio.noise++; return super.createBufferSource(); }
+    };
+  });
+  await page.reload();
+  const mute = page.locator('#mute');
+  await expect(mute).toHaveText('音效：开启 · 静音'); await expect(mute).toHaveAttribute('aria-pressed', 'false');
+  expect(await page.evaluate(() => window.__audio.contexts.length)).toBe(0);
+  await page.getByRole('button', { name: '开始游戏' }).click();
+  await expect.poll(() => page.evaluate(() => window.__audio.contexts[0]?.state), { timeout: 20_000 }).toBe('running');
+  await page.evaluate(() => window.__snake.load({ ...window.__snake.state(), food: { x: 13, y: 12 } }));
+  await page.clock.runFor(250);
+  expect(await page.evaluate(() => window.__audio.tones)).toEqual([{ start: 400, end: 800, type: 'sine' }]);
+  await page.evaluate(() => window.__snake.load({ ...window.__snake.state(), food: null }));
+  await page.keyboard.press('ArrowLeft'); await page.clock.runFor(250);
+  expect(await page.evaluate(() => window.__audio.tones.length)).toBe(1);
+  await page.keyboard.press('w'); expect(await page.evaluate(() => window.__audio.tones.length)).toBe(1);
+  await page.clock.runFor(250);
+  expect(await page.evaluate(() => window.__audio.tones.at(-1)?.start)).toBe(620);
+  await page.evaluate(() => window.__snake.load({ ...window.__snake.state(), snake: [{ x: 24, y: 12 }, { x: 23, y: 12 }, { x: 22, y: 12 }], direction: 'right' }));
+  await page.clock.runFor(250);
+  expect(await page.evaluate(() => window.__audio.tones.at(-1))).toEqual({ start: 200, end: 50, type: 'sawtooth' });
+  expect(await page.evaluate(() => window.__audio.noise)).toBe(1);
+  await page.clock.runFor(1000); expect(await page.evaluate(() => window.__audio.tones.length)).toBe(3);
+  await mute.focus(); await page.keyboard.press('Space');
+  await expect(mute).toHaveText('音效：关闭 · 取消静音'); await expect(mute).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: '再来一局' }).click();
+  await page.evaluate(() => window.__snake.load({ ...window.__snake.state(), food: { x: 13, y: 12 } }));
+  await page.clock.runFor(250); expect(await page.evaluate(() => window.__audio.tones.length)).toBe(3);
+  await mute.click(); await expect(mute).toHaveAttribute('aria-pressed', 'false');
+  await page.evaluate(() => window.__snake.load({ ...window.__snake.state(), food: { x: 14, y: 12 } }));
+  await page.clock.runFor(250); expect(await page.evaluate(() => window.__audio.tones.length)).toBe(4);
+  expect(await page.evaluate(() => window.__audio.contexts.length)).toBe(1);
 });
 test('渐变蛇身、圆角间距、鳞片、头部发光和四向眼睛实际绘制正确', async ({ page }) => {
   await page.evaluate(() => window.__snake.load({

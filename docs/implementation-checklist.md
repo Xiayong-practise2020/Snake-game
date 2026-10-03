@@ -12,13 +12,16 @@
 - [x] Canvas 使用 750×750 逻辑像素，根据 devicePixelRatio 绘制；HTML 展示分数与状态。
 - [x] 蛇头 #00ff88 渐变至蛇尾 #006633；圆角蛇节间距 1px；蛇头光晕；随方向转动的白色眼睛和黑色瞳孔；浅淡鳞片纹理。
 - [x] 食物脉冲缩放与金红粒子旋转；吃到时 24 粒子扩散、淡出并回收；暂停冻结、继续恢复、重开清理。
+- [x] Web Audio API 合成吃食物 400→800Hz、死亡 200→50Hz 加低通噪声、有效转向轻微嘀声；默认开启，支持鼠标或键盘静音切换。
 - [x] `npm run typecheck` 通过。
-- [x] `npm run test`：16 项单元测试全部通过（含粒子生命周期、食物脉冲、渐变颜色及 Windows 启动服务测试）。
-- [x] `npm run test:e2e`：Chromium、Firefox、WebKit 共 12 项全部通过，包含 Canvas 像素、四向眼睛、连续食物动画、爆散与暂停恢复验证。
+- [x] `npm run test`：21 项单元测试全部通过（含音效频率和生命周期、静音、粒子、渐变颜色及 Windows 启动服务测试）。
+- [x] `npm run test:e2e`：Chromium、Firefox、WebKit 共 15 项全部通过，包含音效、Canvas 像素、四向眼睛、食物动画与暂停恢复验证。
 - [x] 页面截图人工检查；开始界面与操作提示显示正常。
 - [x] `npm run build` 通过，构建产物中的测试入口移除检查通过。
 
 浏览器测试使用模拟时钟与仅在 `--mode test` 启用的确定性状态注入。测试独立使用 5174 端口；开发预览使用 5173 端口。Windows 上 Firefox 和 WebKit 首次运行较慢，因此测试串行执行，每项允许 120 秒，游戏内时间仍由模拟时钟精确控制。
+
+音效测试允许 240 秒，在 Chromium 和 Firefox 中检查真实 AudioContext 的运行状态、振荡器频率、死亡噪声、无效输入不发声和静音恢复。Windows 版 Playwright WebKit 没有 AudioContext，因此该环境验证音频不可用时游戏和静音按钮仍正常工作；不将此项视为 WebKit 原生音频播放验证。
 
 依赖版本锁定于 `package-lock.json`。本机为验证下载的便携运行时和浏览器位于 `.runtime/`，不提交到 Git。生产产物位于 `dist/`。
 

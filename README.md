@@ -21,6 +21,8 @@ npm run dev
 
 食物带有脉冲缩放和金红粒子环绕，吃到时播放爆散动画；暂停会冻结动画，重开会清空粒子。
 
+音效默认开启，使用 Web Audio API 合成，无需外部音频文件。吃食物播放上升叮咚音、碰撞播放低沉爆炸音、实际转向播放轻微嘀声；操作区的音效按钮可随时静音或取消静音。首次点击或按键后启用音频。
+
 ```sh
 npm run typecheck
 npm run test
@@ -41,4 +43,4 @@ npm.cmd run dev
 
 验收结果见 [实现检查清单](docs/implementation-checklist.md)。
 
-规则与输入、计时器由单元测试覆盖；浏览器测试在 Chromium、Firefox 和 WebKit 验证流程。确定性测试接口仅在 Vite `--mode test` 下启用，正常生产构建不包含该接口。首版没有音效、难度选择、触控、排行榜或最高分保存。
+规则与输入、计时器、粒子和音效由单元测试覆盖；浏览器测试在 Chromium、Firefox 和 WebKit 验证流程。确定性测试接口仅在 Vite `--mode test` 下启用，正常生产构建不包含该接口。首版没有难度选择、触控、排行榜或最高分保存。
