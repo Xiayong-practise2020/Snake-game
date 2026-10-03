@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { State } from '../../src/game/types';
-declare global { interface Window { __snake: { state(): State; load(state: State): void } } }
+declare global { interface Window { __snake: { state(): State; load(state: State): void; effects(): { time: number; particles: { x: number; y: number; alpha: number; color: string }[] } } } }
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
   // Pause before loading the game, allowing for slow browser startup on Windows.
@@ -51,30 +51,31 @@ test('渐变蛇身、圆角间距、鳞片、头部发光和四向眼睛实际�
 });
 test('完整开始、输入、暂停、结束与重开流程', async ({ page }) => {
   await expect(page.locator('#status')).toHaveText('准备开始');
-  await expect(page.locator('.board-top')).toContainText('30 × 30');
-  await expect(page.locator('.board-bottom')).toContainText('200 ms / 格');
-  expect(await page.locator('canvas').evaluate(c => (c as HTMLCanvasElement).width / window.devicePixelRatio)).toBe(900);
+  await expect(page.locator('.board-top')).toContainText('25 × 25');
+  await expect(page.locator('.board-bottom')).toContainText('250 ms / 格');
+  expect(await page.locator('canvas').evaluate(c => (c as HTMLCanvasElement).width / window.devicePixelRatio)).toBe(750);
   await page.screenshot({ path: `test-results/ready-${test.info().project.name}.png`, fullPage: true });
-  await page.clock.runFor(1000); expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 15, y: 15 });
+  await page.clock.runFor(1000); expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 12, y: 12 });
   await page.getByRole('button', { name: '开始游戏' }).click();
-  await page.clock.runFor(199);
-  expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 15, y: 15 });
+  await page.clock.runFor(249);
+  expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 12, y: 12 });
   await page.clock.runFor(1);
-  expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 16, y: 15 });
+  expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 13, y: 12 });
   await page.getByRole('button', { name: '重新开始' }).click();
   await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowLeft');
-  await page.clock.runFor(200); expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 15, y: 14 });
-  await page.keyboard.press('a'); await page.clock.runFor(200);
-  expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 14, y: 14 });
-  await page.keyboard.press('s'); await page.clock.runFor(200); await page.keyboard.press('d'); await page.clock.runFor(200);
-  await page.keyboard.press('w'); await page.clock.runFor(200);
+  await page.clock.runFor(250); expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 12, y: 11 });
+  await page.keyboard.press('a'); await page.clock.runFor(250);
+  expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 11, y: 11 });
+  await page.keyboard.press('s'); await page.clock.runFor(250); await page.keyboard.press('d'); await page.clock.runFor(250);
+  await page.keyboard.press('w'); await page.clock.runFor(250);
   await page.keyboard.down('Space'); await page.keyboard.down('Space'); await page.keyboard.up('Space'); await expect(page.locator('#status')).toHaveText('已暂停');
   const snapshot = await page.locator('canvas').evaluate(c => (c as HTMLCanvasElement).toDataURL());
   await page.keyboard.press('a'); await page.clock.runFor(1000);
   expect(await page.locator('canvas').evaluate(c => (c as HTMLCanvasElement).toDataURL())).toBe(snapshot);
   await page.getByRole('button', { name: '继续游戏', exact: true }).last().focus();
+  const pausedSnake = await page.evaluate(() => window.__snake.state().snake);
   await page.keyboard.press('Space'); await expect(page.locator('#status')).toHaveText('进行中');
-  await page.clock.runFor(199); expect(await page.locator('canvas').evaluate(c => (c as HTMLCanvasElement).toDataURL())).toBe(snapshot);
+  await page.clock.runFor(249); expect(await page.evaluate(() => window.__snake.state().snake)).toEqual(pausedSnake);
   await page.clock.runFor(1); await page.getByRole('button', { name: '暂停游戏', exact: true }).click();
   await expect(page.locator('#status')).toHaveText('已暂停');
   await page.getByRole('button', { name: '继续游戏', exact: true }).first().click();
@@ -82,21 +83,51 @@ test('完整开始、输入、暂停、结束与重开流程', async ({ page }) 
   await expect(page.locator('#overlay-text')).toContainText('最终得分');
   await page.getByRole('button', { name: '再来一局' }).click();
   await expect(page.locator('#score')).toHaveText('0'); await expect(page.locator('#status')).toHaveText('进行中');
-  expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 15, y: 15 });
+  expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 12, y: 12 });
   const scroll = await page.evaluate(() => window.scrollY); await page.keyboard.press('ArrowDown'); expect(await page.evaluate(() => window.scrollY)).toBe(scroll);
+});
+test('食物连续动画、吃到后的爆散、暂停冻结和重开清理', async ({ page }) => {
+  await page.getByRole('button', { name: '开始游戏' }).click();
+  await page.evaluate(() => window.__snake.load({ ...window.__snake.state(), food: { x: 5, y: 5 } }));
+  const image = () => page.locator('canvas').evaluate(c => (c as HTMLCanvasElement).toDataURL());
+  const first = await image(); const snake = await page.evaluate(() => window.__snake.state().snake);
+  await page.clock.runFor(125); expect(await image()).not.toBe(first);
+  expect(await page.evaluate(() => window.__snake.state().snake)).toEqual(snake);
+  await page.getByRole('button', { name: '暂停游戏', exact: true }).click();
+  const paused = await image(); const time = await page.evaluate(() => window.__snake.effects().time);
+  await page.clock.runFor(1000); expect(await image()).toBe(paused);
+  expect(await page.evaluate(() => window.__snake.effects().time)).toBe(time);
+  await page.evaluate(() => window.__snake.load({ ...window.__snake.state(), phase: 'running', food: { x: 13, y: 12 } }));
+  await page.clock.runFor(250); await expect(page.locator('#score')).toHaveText('1');
+  const burst = await page.evaluate(() => window.__snake.effects().particles);
+  expect(burst).toHaveLength(24); expect(new Set(burst.map(p => p.color))).toEqual(new Set(['#ffd166', '#ff4d4d']));
+  await page.clock.runFor(100);
+  const later = await page.evaluate(() => window.__snake.effects().particles);
+  expect(later[0].x).toBeGreaterThan(burst[0].x); expect(later[0].alpha).toBeLessThan(burst[0].alpha);
+  await page.screenshot({ path: `test-results/food-effects-${test.info().project.name}.png`, fullPage: true });
+  await page.getByRole('button', { name: '暂停游戏', exact: true }).click();
+  const frozen = await page.evaluate(() => window.__snake.effects());
+  await page.clock.runFor(1000); expect(await page.evaluate(() => window.__snake.effects())).toEqual(frozen);
+  await page.getByRole('button', { name: '继续游戏', exact: true }).last().click();
+  await page.clock.runFor(800); expect(await page.evaluate(() => window.__snake.effects().particles)).toEqual([]);
+  await page.evaluate(() => window.__snake.load({ ...window.__snake.state(), food: { x: window.__snake.state().snake[0].x + 1, y: 12 } }));
+  await page.clock.runFor(250); expect(await page.evaluate(() => window.__snake.effects().particles.length)).toBe(24);
+  await page.getByRole('button', { name: '重新开始' }).click();
+  expect(await page.evaluate(() => window.__snake.effects().particles)).toEqual([]);
+  await expect(page.locator('#score')).toHaveText('0');
 });
 test('吃食物得分与满盘胜利反馈', async ({ page }) => {
   await page.getByRole('button', { name: '开始游戏' }).click();
-  await page.evaluate(() => window.__snake.load({ ...window.__snake.state(), food: { x: 16, y: 15 } }));
-  await page.clock.runFor(200); await expect(page.locator('#score')).toHaveText('1');
+  await page.evaluate(() => window.__snake.load({ ...window.__snake.state(), food: { x: 13, y: 12 } }));
+  await page.clock.runFor(250); await expect(page.locator('#score')).toHaveText('1');
   const state = await page.evaluate(() => window.__snake.state()); expect(state.snake.length).toBe(4);
   await page.evaluate(() => {
-    const snake = [{ x: 28, y: 0 }];
-    for (let y = 0; y < 30; y++) for (let x = 0; x < 30; x++) if (!(y === 0 && (x === 28 || x === 29))) snake.push({ x, y });
-    window.__snake.load({ snake, direction: 'right', food: { x: 29, y: 0 }, score: 896, phase: 'running' });
+    const snake = [{ x: 23, y: 0 }];
+    for (let y = 0; y < 25; y++) for (let x = 0; x < 25; x++) if (!(y === 0 && (x === 23 || x === 24))) snake.push({ x, y });
+    window.__snake.load({ snake, direction: 'right', food: { x: 24, y: 0 }, score: 621, phase: 'running' });
   });
-  await page.clock.runFor(200); await expect(page.locator('#status')).toHaveText('胜利'); await expect(page.locator('#score')).toHaveText('897');
-  await expect(page.locator('#overlay-text')).toContainText('最终得分：897');
+  await page.clock.runFor(250); await expect(page.locator('#status')).toHaveText('胜利'); await expect(page.locator('#score')).toHaveText('622');
+  await expect(page.locator('#overlay-text')).toContainText('最终得分：622');
   await page.clock.runFor(1000); expect((await page.evaluate(() => window.__snake.state())).food).toBeNull();
   await page.getByRole('button', { name: '重新开始' }).click(); await expect(page.locator('#score')).toHaveText('0');
 });

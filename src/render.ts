@@ -1,5 +1,6 @@
 import { SIZE, CANVAS_SIZE } from './game/config';
 import type { State } from './game/types';
+import { foodVisual, type FoodEffects, type Particle } from './effects';
 
 export function segmentColor(index: number, length: number): string {
   const progress = length <= 1 ? 0 : index / (length - 1);
@@ -46,11 +47,19 @@ function drawSnake(ctx: CanvasRenderingContext2D, state: State, cell: number) {
   }
 }
 
-export function draw(canvas: HTMLCanvasElement, state: State) {
+function drawParticle(ctx: CanvasRenderingContext2D, particle: Particle) {
+  ctx.save(); ctx.globalAlpha = particle.alpha; ctx.fillStyle = particle.color;
+  ctx.shadowColor = particle.color; ctx.shadowBlur = 5;
+  ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+}
+
+export function draw(canvas: HTMLCanvasElement, state: State, effects?: FoodEffects) {
   const width = CANVAS_SIZE, cell = width / SIZE, ratio = window.devicePixelRatio || 1;
-  canvas.width = width * ratio; canvas.height = width * ratio;
+  if (canvas.width !== width * ratio || canvas.height !== width * ratio) {
+    canvas.width = width * ratio; canvas.height = width * ratio;
+  }
   const ctx = canvas.getContext('2d')!;
-  ctx.scale(ratio, ratio);
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   ctx.fillStyle = '#14251e'; ctx.fillRect(0, 0, width, width);
   ctx.strokeStyle = '#20352b'; ctx.lineWidth = 1;
   for (let i = 0; i <= SIZE; i++) {
@@ -59,7 +68,14 @@ export function draw(canvas: HTMLCanvasElement, state: State) {
   }
   drawSnake(ctx, state, cell);
   if (state.food) {
-    ctx.fillStyle = '#f5a581'; ctx.beginPath(); ctx.arc((state.food.x + .5) * cell, (state.food.y + .5) * cell, 9, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#d9f99d'; ctx.beginPath(); ctx.moveTo((state.food.x + .5) * cell, state.food.y * cell + 7); ctx.lineTo((state.food.x + .65) * cell, state.food.y * cell + 4); ctx.stroke();
+    const visual = foodVisual(effects?.time ?? 0);
+    const x = (state.food.x + .5) * cell, y = (state.food.y + .5) * cell;
+    for (const particle of visual.particles) drawParticle(ctx, { ...particle, x: x + particle.x, y: y + particle.y });
+    ctx.save(); ctx.translate(x, y); ctx.scale(visual.radius / 9, visual.radius / 9);
+    ctx.fillStyle = '#ff6655'; ctx.shadowColor = '#ff4d4d'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.arc(-2.5, -3, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(4, -11); ctx.stroke(); ctx.restore();
   }
+  for (const particle of effects?.particles(cell) ?? []) drawParticle(ctx, particle);
 }

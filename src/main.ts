@@ -4,6 +4,7 @@ import { keys } from './input';
 import { draw } from './render';
 import type { State } from './game/types';
 import { SIZE, PERIOD } from './game/config';
+import { FoodEffects } from './effects';
 document.querySelector('#app')!.innerHTML = `
 <header><a class="brand" href="./" aria-label="青蛇首页"><span class="mark">↳</span> 青蛇<span class="english">SNAKE</span></a><span class="edition">经典玩法 · 专注当下</span></header>
 <section class="intro"><div><p class="eyebrow">A LITTLE BREAK, A LITTLE PLAY</p><h1>再吃一口。</h1><p class="subtitle">循着方向，慢慢长大。把这一格，留给快乐。</p></div><div class="scorecard"><span>本局得分</span><strong id="score">0</strong><small>每一口 +1</small></div></section>
@@ -13,9 +14,27 @@ const canvas = document.querySelector('canvas')!;
 const primary = document.querySelector<HTMLButtonElement>('#primary')!;
 const pause = document.querySelector<HTMLButtonElement>('#pause')!;
 const restart = document.querySelector<HTMLButtonElement>('#restart')!;
+const effects = new FoodEffects();
+let previous: State | undefined;
+let frame: number | undefined;
+let lastFrame = 0;
+function animate(now: number) {
+  frame = undefined;
+  if (game.state.phase === 'paused') return;
+  effects.advance(now - lastFrame); lastFrame = now;
+  draw(canvas, game.state, effects);
+  scheduleAnimation();
+}
+function scheduleAnimation() {
+  const moving = game.state.phase === 'running' || (game.state.phase !== 'paused' && effects.active);
+  if (!moving) { if (frame !== undefined) cancelAnimationFrame(frame); frame = undefined; }
+  else if (frame === undefined) { lastFrame = performance.now(); frame = requestAnimationFrame(animate); }
+}
 const texts = { ready: ['准备开始', '准备好出发了吗？', '从一小段开始，探索整片绿意。', '开始游戏 ↗'], running: ['进行中', '', '', ''], paused: ['已暂停', '休息一下。', '棋盘会在这里，等你继续。', '继续游戏 ↗'], gameOver: ['游戏结束', '这一局，到这里。', '再试一次，走得更远。', '再来一局 ↗'], won: ['胜利', '整片绿意，都属于你！', '你填满了棋盘，漂亮的一局。', '再来一局 ↗'] };
 function render(state: State) {
-  draw(canvas, state);
+  if (previous?.food && state.score === previous.score + 1) effects.burst(previous.food);
+  previous = state;
+  draw(canvas, state, effects);
   const [status, title, description, action] = texts[state.phase];
   document.querySelector('#score')!.textContent = String(state.score);
   document.querySelector('#status')!.textContent = status;
@@ -27,11 +46,13 @@ function render(state: State) {
   pause.textContent = state.phase === 'paused' ? '继续游戏' : '暂停游戏';
   restart.disabled = state.phase === 'ready';
   document.querySelector('#status-dot')!.className = state.phase;
+  scheduleAnimation();
 }
 const game = new Controller(render);
-primary.addEventListener('click', () => game.state.phase === 'paused' ? game.toggle() : game.start());
+function start() { effects.reset(); previous = undefined; game.start(); }
+primary.addEventListener('click', () => game.state.phase === 'paused' ? game.toggle() : start());
 pause.addEventListener('click', () => game.toggle());
-restart.addEventListener('click', () => game.start());
+restart.addEventListener('click', start);
 window.addEventListener('keydown', event => {
   const direction = keys[event.key] ?? keys[event.key.toLowerCase()];
   if (!direction && event.code !== 'Space') return;
@@ -40,8 +61,8 @@ window.addEventListener('keydown', event => {
   if (event.code === 'Space') game.toggle();
   else if (game.state.phase === 'running' && direction) game.input.accept(direction, game.state.direction);
 });
-window.addEventListener('pagehide', () => game.dispose());
+window.addEventListener('pagehide', () => { game.dispose(); if (frame !== undefined) cancelAnimationFrame(frame); });
 render(game.state);
 if (import.meta.env.MODE === 'test') {
-  Object.assign(window, { __snake: { state: () => game.state, load: (state: State) => game.load(state) } });
+  Object.assign(window, { __snake: { state: () => game.state, load: (state: State) => { effects.reset(); previous = undefined; game.load(state); }, effects: () => ({ time: effects.time, particles: effects.particles() }) } });
 }
