@@ -10,9 +10,10 @@
 - [x] 单一定时器；暂停清空输入；继续等待完整周期；重开完全重置。
 - [x] 控制键防滚动；长按空格不重复切换；按钮焦点下空格无双重触发。
 - [x] Canvas 使用 900×900 逻辑像素，根据 devicePixelRatio 绘制；HTML 展示分数与状态。
+- [x] 蛇头 #00ff88 渐变至蛇尾 #006633；圆角蛇节间距 1px；蛇头光晕；随方向转动的白色眼睛和黑色瞳孔；浅淡鳞片纹理。
 - [x] `npm run typecheck` 通过。
-- [x] `npm run test`：12 项单元测试全部通过（含 2 项 Windows 启动服务测试）。
-- [x] `npm run test:e2e`：Chromium、Firefox、WebKit 共 6 项全部通过。
+- [x] `npm run test`：13 项单元测试全部通过（含渐变颜色及 2 项 Windows 启动服务测试）。
+- [x] `npm run test:e2e`：Chromium、Firefox、WebKit 共 9 项全部通过，包含真实 Canvas 像素检查及四向眼睛验证。
 - [x] 页面截图人工检查；开始界面与操作提示显示正常。
 - [x] `npm run build` 通过，构建产物中的测试入口移除检查通过。
 
