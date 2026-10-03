@@ -2,16 +2,16 @@
 
 验证日期：2026-10-03。运行环境：Windows、Node.js 22.20.0。
 
-- [x] TypeScript + Vite + Canvas 2D，20×20 网格，150 ms 固定周期。
+- [x] TypeScript + Vite + Canvas 2D，30×30 网格，200 ms 固定周期。
 - [x] 开始、暂停、继续、结束、胜利和重开，实时分数与最终分数。
 - [x] 方向键和 WASD；每周期最多一次有效转向；反向输入不占机会。
 - [x] 食物只出现在空格；吃食物增长一格、加 1 分；满盘停止生成。
 - [x] 撞墙和自身结束；未增长时允许移动到即将移走的尾格。
 - [x] 单一定时器；暂停清空输入；继续等待完整周期；重开完全重置。
 - [x] 控制键防滚动；长按空格不重复切换；按钮焦点下空格无双重触发。
-- [x] Canvas 根据 devicePixelRatio 绘制；HTML 展示分数与状态。
+- [x] Canvas 使用 900×900 逻辑像素，根据 devicePixelRatio 绘制；HTML 展示分数与状态。
 - [x] `npm run typecheck` 通过。
-- [x] `npm run test`：11 项单元测试全部通过（含 2 项 Windows 启动服务测试）。
+- [x] `npm run test`：12 项单元测试全部通过（含 2 项 Windows 启动服务测试）。
 - [x] `npm run test:e2e`：Chromium、Firefox、WebKit 共 6 项全部通过。
 - [x] 页面截图人工检查；开始界面与操作提示显示正常。
 - [x] `npm run build` 通过，构建产物中的测试入口移除检查通过。

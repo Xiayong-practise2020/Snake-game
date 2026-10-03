@@ -3,19 +3,27 @@ import { foodFor, initial, step, same } from '../../src/game/engine';
 import { Input, keys } from '../../src/input';
 import { Controller } from '../../src/controller';
 import type { State } from '../../src/game/types';
+import { SIZE, PERIOD, CANVAS_SIZE } from '../../src/game/config';
 const running = (): State => initial('running', () => 0);
 afterEach(() => vi.useRealTimers());
 describe('游戏规则', () => {
+  it('使用更大的棋盘和更慢的固定速度，新增边缘格可正常移动和生成食物', () => {
+    expect(SIZE).toBe(30); expect(PERIOD).toBe(200); expect(CANVAS_SIZE).toBe(900);
+    const state = { ...running(), snake: [{ x: 28, y: 29 }, { x: 27, y: 29 }, { x: 26, y: 29 }] };
+    expect(step(state)).toMatchObject({ phase: 'running', snake: [{ x: 29, y: 29 }, { x: 28, y: 29 }, { x: 27, y: 29 }] });
+    expect(foodFor(state.snake, () => .99999)).toEqual({ x: 29, y: 29 });
+    expect(step(step(state)).phase).toBe('gameOver');
+  });
   it('初始化、普通移动与反向保护', () => {
     expect(initial().phase).toBe('ready');
     const state = running();
-    expect(state).toMatchObject({ direction: 'right', score: 0, snake: [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }] });
-    expect(step(state, 'left').snake[0]).toEqual({ x: 11, y: 10 });
+    expect(state).toMatchObject({ direction: 'right', score: 0, snake: [{ x: 15, y: 15 }, { x: 14, y: 15 }, { x: 13, y: 15 }] });
+    expect(step(state, 'left').snake[0]).toEqual({ x: 16, y: 15 });
     expect(step(state).snake).toHaveLength(3);
-    expect(state.snake[0]).toEqual({ x: 10, y: 10 });
+    expect(state.snake[0]).toEqual({ x: 15, y: 15 });
   });
   it('增长与食物始终处于空格', () => {
-    const state = running(); state.food = { x: 11, y: 10 };
+    const state = running(); state.food = { x: 16, y: 15 };
     const next = step(state, 'right', () => .5);
     expect(next.score).toBe(1); expect(next.snake).toHaveLength(4);
     expect(next.snake.some(p => same(p, next.food!))).toBe(false);
@@ -24,7 +32,7 @@ describe('游戏规则', () => {
     expect(foodFor([{ x: 0, y: 0 }], () => 0, 1)).toBeNull();
   });
   it('墙与身体碰撞结束，终止后不再移动', () => {
-    const state = running(); state.snake[0] = { x: 19, y: 10 };
+    const state = running(); state.snake[0] = { x: 29, y: 15 };
     const ended = step(state); expect(ended.phase).toBe('gameOver'); expect(step(ended)).toBe(ended);
     const body = { ...running(), snake: [{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 2, y: 2 }, { x: 1, y: 2 }] };
     expect(step(body).phase).toBe('gameOver');
@@ -53,18 +61,18 @@ describe('游戏规则', () => {
     game.start(); game.input.accept('up', 'right'); vi.advanceTimersByTime(50); game.toggle(); const paused = game.state;
     expect(game.input.pending).toBeUndefined(); expect(vi.getTimerCount()).toBe(0);
     vi.advanceTimersByTime(1000); expect(game.state).toBe(paused);
-    game.toggle(); vi.advanceTimersByTime(149); expect(game.state.snake).toBe(paused.snake);
-    vi.advanceTimersByTime(1); expect(game.state.snake[0]).toEqual({ x: 11, y: 10 });
+    game.toggle(); vi.advanceTimersByTime(199); expect(game.state.snake).toBe(paused.snake);
+    vi.advanceTimersByTime(1); expect(game.state.snake[0]).toEqual({ x: 16, y: 15 });
     game.state.score = 8; game.input.accept('up', 'right'); game.start(); game.start();
     expect(vi.getTimerCount()).toBe(1); expect(game.input.pending).toBeUndefined(); expect(game.state.score).toBe(0);
-    vi.advanceTimersByTime(150); expect(game.state.snake[0]).toEqual({ x: 11, y: 10 });
-    vi.advanceTimersByTime(1500); expect(game.state.phase).toBe('gameOver'); expect(vi.getTimerCount()).toBe(0); game.dispose();
+    vi.advanceTimersByTime(200); expect(game.state.snake[0]).toEqual({ x: 16, y: 15 });
+    vi.advanceTimersByTime(3000); expect(game.state.phase).toBe('gameOver'); expect(vi.getTimerCount()).toBe(0); game.dispose();
   });
   it('反复暂停与继续不会叠加计时器，待开始切换无效果', () => {
     vi.useFakeTimers(); const changed = vi.fn(); const game = new Controller(changed);
     game.toggle(); expect(game.state.phase).toBe('ready'); expect(changed).not.toHaveBeenCalled();
     game.start();
     for (let i = 0; i < 10; i++) { game.toggle(); expect(vi.getTimerCount()).toBe(0); game.toggle(); expect(vi.getTimerCount()).toBe(1); }
-    vi.advanceTimersByTime(150); expect(game.state.snake[0]).toEqual({ x: 11, y: 10 }); game.dispose(); expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(200); expect(game.state.snake[0]).toEqual({ x: 16, y: 15 }); game.dispose(); expect(vi.getTimerCount()).toBe(0);
   });
 });

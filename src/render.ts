@@ -1,7 +1,7 @@
-import { SIZE } from './game/config';
+import { SIZE, CANVAS_SIZE } from './game/config';
 import type { State } from './game/types';
 export function draw(canvas: HTMLCanvasElement, state: State) {
-  const width = 600, cell = width / SIZE, ratio = window.devicePixelRatio || 1;
+  const width = CANVAS_SIZE, cell = width / SIZE, ratio = window.devicePixelRatio || 1;
   canvas.width = width * ratio; canvas.height = width * ratio;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(ratio, ratio);

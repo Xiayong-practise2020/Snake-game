@@ -10,7 +10,8 @@ export function foodFor(snake: Point[], random = Math.random, size = SIZE): Poin
   return free.length ? free[Math.min(free.length - 1, Math.floor(random() * free.length))] : null;
 }
 export function initial(phase: State['phase'] = 'ready', random = Math.random): State {
-  const snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+  const center = Math.floor(SIZE / 2);
+  const snake = [{ x: center, y: center }, { x: center - 1, y: center }, { x: center - 2, y: center }];
   return { snake, direction: 'right', food: foodFor(snake, random), score: 0, phase };
 }
 export function step(state: State, requested = state.direction, random = Math.random, size = SIZE): State {
