@@ -79,11 +79,13 @@ test('渐变蛇身、圆角间距、鳞片、头部发光和四向眼睛实际�
   const pixels = await page.locator('canvas').evaluate(canvas => {
     const ctx = (canvas as HTMLCanvasElement).getContext('2d')!;
     const ratio = window.devicePixelRatio;
+    const cell = (canvas as HTMLCanvasElement).width / ratio / 25;
     const at = (x: number, y: number) => Array.from(ctx.getImageData(Math.floor(x * ratio), Math.floor(y * ratio), 1, 1).data).slice(0, 3);
-    return { head: at(465, 465), tail: at(211, 465), middle: at(331, 465),
-      corner: at(210, 450), gap: at(239.5, 465), body: at(238, 465),
-      glow: at(485, 465), background: at(500, 465),
-      texture: at(334, 457), plain: at(334, 459) };
+    const y = 15.5 * cell;
+    return { head: at(15.5 * cell, y), tail: at(7 * cell + 1, y + 2), middle: at(11 * cell + 1, y + 2),
+      corner: at(7 * cell, 15 * cell), gap: at(8 * cell - .5, y), body: at(8 * cell - 2, y),
+      glow: at(16 * cell + 5, y), background: at(16 * cell + 20, y),
+      texture: at(11 * cell + 4, 15 * cell + 7), plain: at(11 * cell + 4, 15 * cell + 9) };
   });
   expect(pixels.head).toEqual([0, 255, 136]);
   expect(pixels.tail).toEqual([0, 102, 51]);
@@ -97,12 +99,13 @@ test('渐变蛇身、圆角间距、鳞片、头部发光和四向眼睛实际�
     await page.evaluate(direction => window.__snake.load({ ...window.__snake.state(), direction }), direction);
     const eyes = await page.locator('canvas').evaluate((canvas, direction) => {
       const ctx = (canvas as HTMLCanvasElement).getContext('2d')!;
+      const cell = (canvas as HTMLCanvasElement).width / window.devicePixelRatio / 25;
       const vertical = direction === 'up' || direction === 'down';
       const forward = direction === 'up' || direction === 'left' ? -1 : 1;
       const at = (x: number, y: number) => Array.from(ctx.getImageData(Math.floor(x * window.devicePixelRatio), Math.floor(y * window.devicePixelRatio), 1, 1).data).slice(0, 3);
       return [-1, 1].map(side => {
-        const x = 450 + 30 * (.5 + (vertical ? side * .18 : forward * .2));
-        const y = 450 + 30 * (.5 + (vertical ? forward * .2 : side * .18));
+        const x = 15 * cell + cell * (.5 + (vertical ? side * .18 : forward * .2));
+        const y = 15 * cell + cell * (.5 + (vertical ? forward * .2 : side * .18));
         return { white: at(x - (vertical ? 0 : forward * 2), y - (vertical ? forward * 2 : 0)), black: at(x + (vertical ? 0 : forward), y + (vertical ? forward : 0)) };
       });
     }, direction);
@@ -117,7 +120,12 @@ test('完整开始、输入、暂停、结束与重开流程', async ({ page }) 
   await expect(page.locator('#status')).toHaveText('准备开始');
   await expect(page.locator('.board-top')).toContainText('25 × 25');
   await expect(page.locator('.board-bottom')).toContainText('250 ms / 格');
-  expect(await page.locator('canvas').evaluate(c => (c as HTMLCanvasElement).width / window.devicePixelRatio)).toBe(750);
+  const dimensions = await page.locator('canvas').evaluate(c => {
+    const canvas = c as HTMLCanvasElement, bounds = canvas.getBoundingClientRect();
+    return { drawing: canvas.width / window.devicePixelRatio, width: bounds.width, height: bounds.height };
+  });
+  expect(dimensions.drawing).toBe(700);
+  expect(dimensions.width / 25).toBeCloseTo(28, 1); expect(dimensions.height / 25).toBeCloseTo(28, 1);
   await page.screenshot({ path: `test-results/ready-${test.info().project.name}.png`, fullPage: true });
   await page.clock.runFor(1000); expect(await page.evaluate(() => window.__snake.state().snake[0])).toEqual({ x: 12, y: 12 });
   await page.getByRole('button', { name: '开始游戏' }).click();

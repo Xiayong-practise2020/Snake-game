@@ -24,3 +24,9 @@ it('多个连续食物爆散分别回收，负时间不导致动画倒退', () =
   expect(effects.particles()).toHaveLength(48); effects.advance(-100); expect(effects.time).toBe(300);
   effects.advance(350); expect(effects.particles()).toHaveLength(24); effects.advance(300); expect(effects.active).toBe(false);
 });
+it('爆散中心和绘制共用28像素网格，调整尺寸不会偏移食物位置', () => {
+  const effects = new FoodEffects(); effects.burst({ x: 3, y: 4 });
+  const particles = effects.particles();
+  expect(particles.reduce((sum, p) => sum + p.x, 0) / particles.length).toBeCloseTo(3.5 * 28);
+  expect(particles.reduce((sum, p) => sum + p.y, 0) / particles.length).toBeCloseTo(4.5 * 28);
+});

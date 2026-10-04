@@ -1,4 +1,5 @@
 import type { Point } from './game/types';
+import { CELL_SIZE } from './game/config';
 
 export const BURST_LIFETIME = 650;
 export const PARTICLE_COLORS = ['#ffd166', '#ff4d4d'] as const;
@@ -23,7 +24,7 @@ export class FoodEffects {
     this.time += Math.max(0, milliseconds);
     this.bursts = this.bursts.filter(burst => this.time - burst.born < BURST_LIFETIME);
   }
-  particles(cell = 30): Particle[] {
+  particles(cell = CELL_SIZE): Particle[] {
     return this.bursts.flatMap(burst => {
       const age = (this.time - burst.born) / 1000;
       const alpha = Math.pow(1 - (this.time - burst.born) / BURST_LIFETIME, 2);

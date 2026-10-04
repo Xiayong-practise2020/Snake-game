@@ -3,12 +3,12 @@ import { foodFor, initial, step, same } from '../../src/game/engine';
 import { Input, keys } from '../../src/input';
 import { Controller } from '../../src/controller';
 import type { State } from '../../src/game/types';
-import { SIZE, PERIOD, CANVAS_SIZE } from '../../src/game/config';
+import { SIZE, PERIOD, CELL_SIZE, CANVAS_SIZE } from '../../src/game/config';
 const running = (): State => initial('running', () => 0);
 afterEach(() => vi.useRealTimers());
 describe('游戏规则', () => {
   it('使用更大的棋盘和更慢的固定速度，新增边缘格可正常移动和生成食物', () => {
-    expect(SIZE).toBe(25); expect(PERIOD).toBe(250); expect(CANVAS_SIZE).toBe(750);
+    expect(SIZE).toBe(25); expect(PERIOD).toBe(250); expect(CELL_SIZE).toBe(28); expect(CANVAS_SIZE).toBe(700);
     const state = { ...running(), snake: [{ x: 23, y: 24 }, { x: 22, y: 24 }, { x: 21, y: 24 }] };
     expect(step(state)).toMatchObject({ phase: 'running', snake: [{ x: 24, y: 24 }, { x: 23, y: 24 }, { x: 22, y: 24 }] });
     expect(foodFor(state.snake, () => .99999)).toEqual({ x: 24, y: 24 });

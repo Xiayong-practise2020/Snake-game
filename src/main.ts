@@ -3,9 +3,10 @@ import { Controller } from './controller';
 import { keys } from './input';
 import { draw } from './render';
 import type { State } from './game/types';
-import { SIZE, PERIOD } from './game/config';
+import { SIZE, PERIOD, CANVAS_SIZE } from './game/config';
 import { FoodEffects } from './effects';
 import { GameAudio, transitionSounds } from './audio';
+document.documentElement.style.setProperty('--board-size', `${CANVAS_SIZE}px`);
 document.querySelector('#app')!.innerHTML = `
 <header><a class="brand" href="./" aria-label="青蛇首页"><span class="mark">↳</span> 青蛇<span class="english">SNAKE</span></a><span class="edition">经典玩法 · 专注当下</span></header>
 <section class="intro"><div><p class="eyebrow">A LITTLE BREAK, A LITTLE PLAY</p><h1>再吃一口。</h1><p class="subtitle">循着方向，慢慢长大。把这一格，留给快乐。</p></div><div class="scorecard"><span>本局得分</span><strong id="score">0</strong><small>每一口 +1</small></div></section>
